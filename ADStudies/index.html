@@ -1,0 +1,122 @@
+<!DOCTYPE html><html lang="en"><head>
+  <script src="js/lock.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ADStudies</title>
+  <link rel="icon" type="image/png" href="images/adstudies.png">
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/popup.css">
+
+
+<!-- Google tag (gtag.js) -->
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=G-4HV2YN857N"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-4HV2YN857N');
+</script>
+</head>
+<body>
+
+  <header class="header">
+    <img src="images/adstudies.png" class="logo" alt="logo">
+    <div class="right">
+      <div class="search-wrap" id="searchWrap">
+        <input id="searchInput" type="search" class="search-box" placeholder="Search courses...">
+        <button class="icon-btn search-btn" onclick="toggleSearch()" aria-label="Search">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+      </div>
+
+      <button id="resbtn" class="icon-btn" onclick="location.href='/res'" aria-label="Resources">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  
+  <div class="wrap">
+    <main>
+      <div id="panelViewport" class="view-viewport">
+        <div id="panelTrack" class="panel-track">
+          <section id="panel-courses" class="panel active" aria-label="Courses">
+            <div id="grid-courses" class="grid" aria-live="polite"></div>
+            <div class="center">
+              <button id="loadMoreCourses" style="display:none">Load More</button>
+            </div>
+            <div id="status-courses"></div>
+          </section>
+
+          <section id="panel-tests" class="panel" aria-label="Test Series">
+            <div id="grid-tests" class="grid" aria-live="polite"></div>
+            <div class="center">
+              <button id="loadMoreTests" style="display:none">Load More</button>
+            </div>
+            <div id="status-tests"></div>
+          </section>
+
+          <section id="panel-favorites" class="panel" aria-label="Favorites">
+            <div id="grid-favorites" class="grid" aria-live="polite"></div>
+            <div id="status-favorites"></div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <div class="bottom-nav-inner">
+      <div id="bottomPill" class="bottom-pill"></div>
+      <button id="tabCourses" class="bottom-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="3"></rect>
+          <path d="M7 8H7.01M7 12H7.01M7 16H7.01" stroke-width="2.2"></path>
+          <path d="M10 8H17"></path>
+          <path d="M10 12H17"></path>
+          <path d="M10 16H14"></path>
+        </svg>
+        <span>Courses</span>
+      </button>
+
+      <button id="tabTests" class="bottom-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="2" width="6" height="4" rx="1.5"></rect>
+          <rect x="5" y="5" width="14" height="17" rx="2.5"></rect>
+          <path d="M9 13l2 2 4-4"></path>
+          <path d="M9 9h6M9 17h6"></path>
+        </svg>
+        <span>Test Series</span>
+      </button>
+
+      <button id="favBtn" class="bottom-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 3.5h10a1.5 1.5 0 0 1 1.5 1.5v15l-6.5-3.5-6.5 3.5V5A1.5 1.5 0 0 1 7 3.5Z"></path>
+          <path d="M12 15.2
+                   C10.2 13.9 8.2 12.4 8.2 10.5
+                   C8.2 9.4 9.1 8.6 10.2 8.6
+                   C11 8.6 11.6 9 12 9.6
+                   C12.4 9 13 8.6 13.8 8.6
+                   C14.9 8.6 15.8 9.4 15.8 10.5
+                   C15.8 12.4 13.8 13.9 12 15.2Z"></path>
+        </svg>
+        <span>My Fav</span>
+      </button>
+    </div>
+  </nav>
+  
+  <script src="js/contact-us.js"></script>
+<script src="js/config.js"></script>
+<script src="js/index.js"></script>
+  <script src="js/popup.js"></script>
+
+
+</body></html>
