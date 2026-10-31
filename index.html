@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Premium Study Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Top Sticky Navigation -->
+  <header>
+    <div class="header-left">
+      <button id="backBtn" class="back-btn" onclick="goBack()">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <div class="brand-title" id="headerTitle">Study Portal</div>
+    </div>
+    <div class="status-pill">
+      <span class="status-dot"></span> Live Sync
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <div class="container">
+    <div class="breadcrumb-bar" id="breadcrumbBar"></div>
+    <div id="appView">
+      <div class="loader"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading Study Courses...</div>
+    </div>
+  </div>
+
+  <!-- Online Notes Viewer Modal -->
+  <div class="notes-modal" id="notesModal">
+    <div class="notes-modal-header">
+      <div class="notes-modal-title">
+        <i class="fa-solid fa-book-open-reader" style="color: var(--warning);"></i>
+        <span id="notesModalTitle">Lecture Notes</span>
+      </div>
+      <button class="close-notes-btn" onclick="closeNotesModal()">
+        <i class="fa-solid fa-xmark"></i> Close
+      </button>
+    </div>
+    <div class="notes-viewer-body" id="notesViewerBody"></div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
