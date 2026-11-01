@@ -7,6 +7,11 @@ let currentCourseId = null;
 let currentSubjectId = null;
 let currentChapterId = null;
 let currentLectureIndex = 0;
+let activePlayer = null;
+
+function destroyPlayer() {
+  if (activePlayer) { activePlayer.destroy(); activePlayer = null; }
+}
 
 /* ---------------- Helpers ---------------- */
 
@@ -90,6 +95,7 @@ async function loadDatabase() {
 /* ---------------- Navigation ---------------- */
 
 function updateHeader(title, showBack, breadcrumbHtml) {
+  destroyPlayer();
   document.getElementById("headerTitle").innerText = title;
   document.getElementById("backBtn").style.display = showBack ? "flex" : "none";
   document.getElementById("breadcrumbBar").innerHTML = breadcrumbHtml || "";
@@ -320,7 +326,7 @@ function getOrderedLectures(chapterObj) {
   });
 }
 
-function openLecturesView(courseId, subjectId, chapterId, activeIdx = 0) {
+function openLecturesView(courseId, subjectId, chapterId, activeIdx = 0, autoplay = false) {
   if (currentChapterId !== chapterId) {
     navStack.push(() => {
       currentChapterId = null;
@@ -357,18 +363,10 @@ function openLecturesView(courseId, subjectId, chapterId, activeIdx = 0) {
   }
 
   const activeLec = lectures[activeIdx] || lectures[0];
-  const embedUrl = getYouTubeEmbedUrl(activeLec.videoUrl);
 
   let html = `
     <div class="player-wrapper">
-      <div class="video-frame-16-9">
-        <iframe
-          src="${esc(embedUrl)}"
-          title="${esc(activeLec.autoTitle)}"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen>
-        </iframe>
-      </div>
+      <div id="hpMount"></div>
       <div class="active-lec-details">
         <div class="active-lec-meta">
           <div class="lec-pill-row">
@@ -419,12 +417,20 @@ function openLecturesView(courseId, subjectId, chapterId, activeIdx = 0) {
   });
 
   html += `</div>`;
+  destroyPlayer();
   document.getElementById("appView").innerHTML = html;
   window.scrollTo({ top: 0, behavior: "smooth" });
+
+  activePlayer = new HrryPlayer(document.getElementById("hpMount"), {
+    videoId: extractYouTubeId(activeLec.videoUrl),
+    title: activeLec.autoTitle,
+    poster: getYouTubeThumb(activeLec.videoUrl, activeLec.thumbnail),
+    autoplay: autoplay
+  });
 }
 
 function switchLecture(newIndex) {
-  openLecturesView(currentCourseId, currentSubjectId, currentChapterId, newIndex);
+  openLecturesView(currentCourseId, currentSubjectId, currentChapterId, newIndex, true);
 }
 
 /* ---------------- Notes viewer ---------------- */
