@@ -3,24 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b0f17" />
-  <title>Study Portal</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#090316" />
+  <meta name="author" content="Himanshu Raj Yadav (By Hrry)" />
+  <title>Study Portal – StudyMods Hrry | Himanshu Raj Yadav</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- Top Sticky Navigation -->
+  <!-- Ambient Lightweight Background Glows -->
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="orb orb-cyan"></div>
+    <div class="orb orb-pink"></div>
+    <div class="orb orb-gold"></div>
+  </div>
+
+  <!-- Top Sticky iOS Dynamic Island Navigation -->
   <header>
-    <div class="header-left">
-      <button id="backBtn" class="back-btn" onclick="goBack()">
-        <i class="fa-solid fa-arrow-left"></i>
-      </button>
-      <div class="brand-title" id="headerTitle">Study Portal</div>
-    </div>
-    <div class="status-pill">
-      <span class="status-dot"></span> Live Sync
+    <div class="ios-island">
+      <div class="header-left">
+        <button id="backBtn" class="back-btn" onclick="goBack()" aria-label="Go Back">
+          <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <div class="brand-box">
+          <div class="brand-title" id="headerTitle">Study Portal</div>
+          <div class="brand-sub">Himanshu Raj Yadav • <span>By Hrry</span></div>
+        </div>
+      </div>
+      <div class="status-pill">
+        <span class="status-dot"></span> Live Sync
+      </div>
     </div>
   </header>
 
@@ -28,15 +43,27 @@
   <div class="container">
     <div class="breadcrumb-bar" id="breadcrumbBar"></div>
     <div id="appView">
-      <div class="loader"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading Study Courses...</div>
+      <div class="loader">
+        <div class="ios-spinner"></div>
+        <span>Loading Study Courses...</span>
+      </div>
     </div>
   </div>
+
+  <!-- Developer Footer -->
+  <footer class="author-footer">
+    <div class="author-pill">
+      <i class="fa-solid fa-crown"></i>
+      <span>Developed by <b class="author-name">Himanshu Raj Yadav</b></span>
+      <span class="by-hrry-tag">By Hrry</span>
+    </div>
+  </footer>
 
   <!-- Online Notes Viewer Modal -->
   <div class="notes-modal" id="notesModal">
     <div class="notes-modal-header">
       <div class="notes-modal-title">
-        <i class="fa-solid fa-book-open-reader" style="color: var(--warning);"></i>
+        <i class="fa-solid fa-book-open-reader" style="color: #ffbe0b;"></i>
         <span id="notesModalTitle">Lecture Notes</span>
       </div>
       <button class="close-notes-btn" onclick="closeNotesModal()">
