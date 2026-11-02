@@ -739,15 +739,32 @@ header {
 
 /* ---------- 4. Lecture Page (Sticky 16:9 Player + Separate Tools) ---------- */
 .player-wrapper {
-  position: sticky;
-  top: calc(66px + env(safe-area-inset-top, 0px));
+  /* Player hamesha 16:9 frame me; mobile pe header ke theek neeche tika rehta hai */
+  position: relative;
   z-index: 150;
-  background: linear-gradient(145deg, rgba(28, 12, 58, 0.96), rgba(12, 18, 48, 0.96));
+  background: linear-gradient(145deg, rgba(28, 12, 58, 0.98), rgba(12, 18, 48, 0.98));
   border: 2px solid rgba(0, 245, 212, 0.55);
   border-radius: 22px;
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.75), var(--ios-highlight);
+  scroll-margin-top: calc(var(--hdr-h, 76px) + 6px);
+}
+
+.player-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  overflow: hidden;
+}
+
+/* mobile (portrait): player upar fix, neeche ka content scroll/swipe */
+@media (max-width: 700px) and (orientation: portrait) {
+  .player-wrapper {
+    position: sticky;
+    top: var(--hdr-h, 76px);
+  }
 }
 
 .active-lec-details {
@@ -762,6 +779,28 @@ header {
 
 .active-lec-meta {
   min-width: 0;
+  flex: 1;
+}
+
+.active-lec-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ext-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  text-decoration: none;
 }
 
 .lec-pill-row {
@@ -798,6 +837,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   font-size: 15px;
   font-weight: 800;
   padding: 11px 16px;
@@ -806,6 +846,122 @@ header {
   background: linear-gradient(90deg, rgba(255, 0, 127, 0.25), rgba(131, 56, 236, 0.25), rgba(0, 187, 249, 0.25));
   border: 1px solid rgba(255, 255, 255, 0.22);
 }
+
+.playlist-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlist-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.playlist-count {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-right: 2px;
+}
+
+.car-arrow {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.car-arrow:active { transform: scale(0.9); }
+
+@media (hover: none) {
+  .car-arrow { display: none; }
+}
+
+/* Swipe karne wali lecture strip */
+.lec-carousel {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 12px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 245, 212, 0.5) transparent;
+}
+
+@media (hover: none) {
+  .lec-carousel { scrollbar-width: none; }
+  .lec-carousel::-webkit-scrollbar { display: none; }
+}
+
+.lec-card {
+  flex: 0 0 clamp(150px, 40vw, 220px);
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 8px;
+  background: linear-gradient(145deg, rgba(38, 16, 72, 0.88), rgba(16, 22, 52, 0.9));
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 18px;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35), var(--ios-highlight);
+  transition: transform 0.22s var(--ease), border-color 0.22s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.lec-card:hover { transform: translateY(-2px); border-color: rgba(0, 245, 212, 0.55); }
+.lec-card:active { transform: scale(0.97); }
+
+.lec-card.playing {
+  border: 2px solid #00f5d4;
+  background: linear-gradient(145deg, rgba(0, 245, 155, 0.26), rgba(0, 187, 249, 0.22), rgba(14, 28, 52, 0.94));
+  box-shadow: 0 0 22px rgba(0, 245, 212, 0.3), var(--ios-highlight);
+}
+
+.lec-card.playing .mini-play-overlay { color: #00f59b; }
+
+.lec-card .mini-video-frame { width: 100%; }
+
+.lec-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 0 2px 2px;
+  min-width: 0;
+}
+
+.lec-card .compact-lec-title {
+  font-size: 12.5px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.swipe-hint {
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+@media (hover: hover) { .swipe-hint { display: none; } }
 
 .compact-lec-list {
   display: flex;
@@ -1115,6 +1271,18 @@ header {
   height: 100dvh;
 }
 
+.hp-frame iframe,
+.hp-native video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+}
+
+.hp-native video { object-fit: contain; }
+
 .hp-stage {
   position: absolute;
   inset: 0;
@@ -1222,6 +1390,12 @@ header {
 
 .hp.show-ui .hp-ui {
   opacity: 1;
+}
+
+/* video start hone se pehle sirf poster + big play dikhe */
+.hp:not(.started) .hp-ui,
+.hp:not(.started) .hp-flash {
+  display: none;
 }
 
 .hp.show-ui .hp-top > button,
@@ -1641,5 +1815,14 @@ header {
     left: 100vw;
     inset: auto;
     position: fixed;
+  }
+}
+
+/* Desktop/landscape: 16:9 player screen ki height se bada na ho, carousel dikhta rahe */
+@media (min-width: 701px) {
+  .player-wrapper {
+    max-width: max(480px, min(100%, calc((100vh - 250px) * 16 / 9)));
+    margin-left: auto;
+    margin-right: auto;
   }
 }

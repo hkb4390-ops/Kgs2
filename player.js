@@ -73,7 +73,7 @@
   HrryPlayer.prototype._build = function () {
     const m = this.mount;
     m.innerHTML = `
-      <div class="hp show-ui" tabindex="0" aria-label="Video player">
+      <div class="hp" tabindex="0" aria-label="Video player">
         <div class="hp-stage"><div class="hp-yt"></div></div>
         <div class="hp-shield"></div>
         <div class="hp-poster" ${this.poster ? `style="background-image:url('${esc(this.poster)}')"` : ""}>
@@ -167,7 +167,7 @@
             self.ready = true;
             self.duration = self.yt.getDuration() || 0;
             el.dur.textContent = fmt(self.duration);
-            if (self.opts.autoplay) self.play();
+            if (self.opts.autoplay || self.pendingPlay) { self.pendingPlay = false; self.play(); }
           },
           onStateChange: (e) => self._onState(e.data),
           onError: (e) => {
@@ -193,7 +193,7 @@
     const icon = playing ? "fa-pause" : "fa-play";
     el.toggle.innerHTML = `<i class="fa-solid ${icon}"></i>`;
     if (s === 1 || s === 3) {
-      if (!this.started) { this.started = true; el.poster.classList.add("hide"); }
+      if (!this.started) { this.started = true; el.poster.classList.add("hide"); root.classList.add("started", "show-ui"); }
       if (!this.duration || this.duration < 1) {
         this.duration = this.yt.getDuration() || 0;
         el.dur.textContent = fmt(this.duration);
@@ -237,7 +237,12 @@
   };
 
   /* ---------- actions ---------- */
-  HrryPlayer.prototype.play = function () { if (this.yt && this.ready) this.yt.playVideo(); };
+  HrryPlayer.prototype.play = function () {
+    if (this.yt && this.ready) { this.yt.playVideo(); return; }
+    // player abhi load ho raha hai: ready hote hi play kar denge
+    this.pendingPlay = true;
+    if (this.root && !this.started) this.root.classList.add("buffering");
+  };
   HrryPlayer.prototype.pause = function () { if (this.yt && this.ready) this.yt.pauseVideo(); };
   HrryPlayer.prototype.togglePlay = function () {
     if (!this.yt || !this.ready) return;
@@ -493,7 +498,7 @@
       if (self.yt && self.yt.destroy) { try { self.yt.destroy(); } catch (e) {} }
       self.root.querySelector(".hp-stage").innerHTML = '<div class="hp-yt"></div>';
       self.el.ytHost = self.root.querySelector(".hp-yt");
-      self.started = false; self.ready = false;
+      self.started = false; self.ready = false; self.root.classList.remove("started", "show-ui", "buffering");
       self.el.poster.classList.remove("hide");
       self._init();
     });
@@ -528,4 +533,138 @@
   };
 
   window.HrryPlayer = HrryPlayer;
+
+  /* =========================================================
+     Source detection + other players
+     YouTube      -> HrryPlayer (custom glass UI)
+     .mp4/.webm   -> native <video> (16:9 box)
+     .m3u8 (HLS)  -> native <video> + hls.js
+     baaki sab    -> <iframe> embed (fembed.co, Drive, Vimeo, ...)
+     ========================================================= */
+  const YT_RE = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+
+  function parseVideoSource(raw) {
+    let s = String(raw == null ? "" : raw).trim();
+    if (!s) return { type: "none" };
+
+    // Agar admin ne poora <iframe ... src="..."> code paste kar diya ho
+    const ifr = s.match(/<iframe[^>]*\ssrc\s*=\s*["']([^"']+)["']/i);
+    if (ifr) s = ifr[1].trim();
+
+    if (s.indexOf("//") === 0) s = "https:" + s;
+    if (!/^https?:\/\//i.test(s)) {
+      if (/^[\w-]+(\.[\w-]+)+\/\S+/.test(s)) s = "https://" + s; else return { type: "none" };
+    }
+    s = s.replace(/&amp;/g, "&");
+
+    const yt = s.match(YT_RE);
+    if (yt && yt[1]) return { type: "youtube", id: yt[1], url: s };
+
+    const drive = s.match(/drive\.google\.com\/file\/d\/([\w-]+)/i);
+    if (drive) return { type: "embed", url: "https://drive.google.com/file/d/" + drive[1] + "/preview", ext: s };
+
+    const vimeo = s.match(/^https?:\/\/(?:www\.)?vimeo\.com\/(?:video\/)?(\d+)/i);
+    if (vimeo) return { type: "embed", url: "https://player.vimeo.com/video/" + vimeo[1], ext: s };
+
+    if (/\.m3u8(\?|#|$)/i.test(s)) return { type: "hls", url: s };
+    if (/\.(mp4|webm|ogv|m4v|mov)(\?|#|$)/i.test(s)) return { type: "file", url: s };
+
+    return { type: "embed", url: s, ext: s };
+  }
+  window.parseVideoSource = parseVideoSource;
+
+  /* ---------- iframe embed (fembed etc.) ---------- */
+  function FramePlayer(mount, opts) {
+    this.mount = mount;
+    mount.innerHTML =
+      '<div class="hp hp-frame">' +
+        '<iframe src="' + esc(opts.url) + '" title="' + esc(opts.title || "Video") + '"' +
+        ' allow="autoplay; fullscreen; picture-in-picture; encrypted-media; accelerometer; gyroscope"' +
+        ' allowfullscreen webkitallowfullscreen mozallowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>' +
+        '<div class="hp-spinner hp-frame-spin" style="display:block"></div>' +
+      "</div>";
+    const ifr = mount.querySelector("iframe");
+    const spin = mount.querySelector(".hp-frame-spin");
+    const done = () => { if (spin) spin.style.display = "none"; };
+    ifr.addEventListener("load", done);
+    this._t = setTimeout(done, 8000);
+  }
+  FramePlayer.prototype.destroy = function () {
+    clearTimeout(this._t);
+    const f = this.mount.querySelector("iframe");
+    if (f) f.src = "about:blank"; // audio band ho jaye
+    this.mount.innerHTML = "";
+  };
+
+  /* ---------- direct file / HLS ---------- */
+  let hlsPromise = null;
+  function loadHls() {
+    if (window.Hls) return Promise.resolve();
+    if (hlsPromise) return hlsPromise;
+    hlsPromise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js";
+      s.onload = resolve;
+      s.onerror = () => { hlsPromise = null; reject(new Error("hls.js load failed")); };
+      document.head.appendChild(s);
+    });
+    return hlsPromise;
+  }
+
+  function NativePlayer(mount, opts) {
+    this.mount = mount;
+    mount.innerHTML =
+      '<div class="hp hp-native"><video controls playsinline webkit-playsinline preload="metadata"' +
+      ' controlsList="nodownload"' + (opts.poster ? ' poster="' + esc(opts.poster) + '"' : "") + "></video></div>";
+    const v = (this.video = mount.querySelector("video"));
+    const self = this;
+    const start = () => { if (opts.autoplay) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } };
+
+    if (opts.type === "hls" && !v.canPlayType("application/vnd.apple.mpegurl")) {
+      loadHls().then(() => {
+        if (self.destroyed) return;
+        if (window.Hls && window.Hls.isSupported()) {
+          self.hls = new window.Hls();
+          self.hls.loadSource(opts.url);
+          self.hls.attachMedia(v);
+          start();
+        } else { v.src = opts.url; start(); }
+      }).catch(() => { v.src = opts.url; });
+    } else {
+      v.src = opts.url;
+      start();
+    }
+  }
+  NativePlayer.prototype.destroy = function () {
+    this.destroyed = true;
+    try { if (this.hls) this.hls.destroy(); } catch (e) {}
+    try { this.video.pause(); this.video.removeAttribute("src"); this.video.load(); } catch (e) {}
+    this.mount.innerHTML = "";
+  };
+
+  function EmptyPlayer(mount, msg) {
+    this.mount = mount;
+    mount.innerHTML =
+      '<div class="hp"><div class="hp-error show">' +
+      '<i class="fa-solid fa-triangle-exclamation" style="font-size:26px;color:#f0b24a"></i>' +
+      "<h4>Video link nahi mila</h4><p>" + esc(msg) + "</p></div></div>";
+  }
+  EmptyPlayer.prototype.destroy = function () { this.mount.innerHTML = ""; };
+
+  /* ---------- ek hi entry point ---------- */
+  window.createLecturePlayer = function (mount, opts) {
+    const src = parseVideoSource(opts.url);
+    mount.innerHTML = "";
+    switch (src.type) {
+      case "youtube":
+        return new HrryPlayer(mount, { videoId: src.id, title: opts.title, poster: opts.poster, autoplay: opts.autoplay });
+      case "file":
+      case "hls":
+        return new NativePlayer(mount, { url: src.url, type: src.type, poster: opts.poster, autoplay: opts.autoplay });
+      case "embed":
+        return new FramePlayer(mount, { url: src.url, title: opts.title });
+      default:
+        return new EmptyPlayer(mount, "Admin panel me is lecture ka video link khali ya galat hai.");
+    }
+  };
 })();

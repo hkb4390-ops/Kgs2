@@ -36,6 +36,7 @@ function subjectInitials(title) {
 
 function extractYouTubeId(url) {
   if (!url) return "";
+  if (window.parseVideoSource) { const p = window.parseVideoSource(url); return p.type === "youtube" ? p.id : ""; }
   const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
   const match = url.match(regExp);
   return match && match[1] ? match[1] : "";
@@ -326,6 +327,90 @@ function getOrderedLectures(chapterObj) {
   });
 }
 
+let currentLectures = [];
+let currentChapterObj = null;
+
+function notesBtnAttrs(lec) {
+  return `onclick="event.stopPropagation(); openNotesModal('${encodeURIComponent(lec.autoTitle)}', '${encodeURIComponent(lec.notesUrl || '')}')"`;
+}
+
+// Active lecture ki details (badge, title, notes, external link)
+function activeDetailsHtml(lec, chapter) {
+  const src = window.parseVideoSource ? window.parseVideoSource(lec.videoUrl) : { type: "none" };
+  const extBtn = src.type === "embed" && src.ext
+    ? `<a class="ext-btn" href="${esc(src.ext)}" target="_blank" rel="noopener noreferrer" title="Naye tab me kholein"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`
+    : "";
+  return `
+    <div class="active-lec-meta">
+      <div class="lec-pill-row">
+        <span class="lec-num-badge">LEC NO. ${lec.lecNumber}</span>
+        <span class="lec-chap-tag"><i class="fa-solid fa-bookmark"></i> ${esc(chapter.title)}</span>
+      </div>
+      <div class="active-lec-title">${esc(lec.autoTitle)}</div>
+    </div>
+    <div class="active-lec-actions">
+      ${extBtn}
+      <button class="notes-btn-small" style="padding:10px 16px;font-size:13.5px;" ${notesBtnAttrs(lec)}>
+        <i class="fa-solid fa-file-pdf"></i> Notes
+      </button>
+    </div>`;
+}
+
+function lecCardHtml(lec, idx, isPlaying) {
+  const thumbUrl = getYouTubeThumb(lec.videoUrl, lec.thumbnail);
+  const thumbHtml = thumbUrl
+    ? `<img src="${esc(thumbUrl)}" alt="Lec ${lec.lecNumber}" loading="lazy" draggable="false" onerror="this.remove()">`
+    : "";
+  return `
+    <div class="lec-card ${isPlaying ? 'playing' : ''}" data-idx="${idx}" onclick="switchLecture(${idx})">
+      <div class="mini-video-frame">
+        ${thumbHtml}
+        <div class="mini-play-overlay"><i class="fa-solid ${isPlaying ? 'fa-volume-high' : 'fa-play'}"></i></div>
+        <div class="mini-lec-badge">Lec ${lec.lecNumber}</div>
+      </div>
+      <div class="lec-card-body">
+        <div class="compact-lec-title">${esc(lec.autoTitle)}</div>
+        <button class="notes-btn-small" ${notesBtnAttrs(lec)}>
+          <i class="fa-solid fa-book-open"></i> Notes
+        </button>
+      </div>
+    </div>`;
+}
+
+function mountLecturePlayer(lec, autoplay) {
+  destroyPlayer();
+  activePlayer = createLecturePlayer(document.getElementById("hpMount"), {
+    url: lec.videoUrl,
+    title: lec.autoTitle,
+    poster: getYouTubeThumb(lec.videoUrl, lec.thumbnail),
+    autoplay: autoplay
+  });
+}
+
+// Active card ko carousel ke beech me laao (sirf carousel scroll hota hai, page nahi)
+function centerActiveCard(smooth) {
+  const car = document.getElementById("lecCarousel");
+  const card = car && car.querySelector(".lec-card.playing");
+  if (!car || !card) return;
+  const left = card.offsetLeft - (car.clientWidth - card.offsetWidth) / 2;
+  car.scrollTo({ left: Math.max(0, left), behavior: smooth ? "smooth" : "auto" });
+}
+
+function scrollLecCarousel(dir) {
+  const car = document.getElementById("lecCarousel");
+  if (car) car.scrollBy({ left: dir * car.clientWidth * 0.8, behavior: "smooth" });
+}
+
+function ensurePlayerVisible() {
+  const w = document.querySelector(".player-wrapper");
+  if (!w) return;
+  const hdr = (document.querySelector("header") || {}).offsetHeight || 0;
+  const r = w.getBoundingClientRect();
+  if (r.top < hdr - 2 || r.top > window.innerHeight * 0.6) {
+    window.scrollTo({ top: Math.max(0, window.scrollY + r.top - hdr - 6), behavior: "smooth" });
+  }
+}
+
 function openLecturesView(courseId, subjectId, chapterId, activeIdx = 0, autoplay = false) {
   if (currentChapterId !== chapterId) {
     navStack.push(() => {
@@ -337,7 +422,6 @@ function openLecturesView(courseId, subjectId, chapterId, activeIdx = 0, autopla
   currentCourseId = courseId;
   currentSubjectId = subjectId;
   currentChapterId = chapterId;
-  currentLectureIndex = activeIdx;
 
   const course = studyData.courses[courseId];
   const subject = course?.subjects?.[subjectId];
@@ -353,84 +437,69 @@ function openLecturesView(courseId, subjectId, chapterId, activeIdx = 0, autopla
   );
 
   if (lectures.length === 0) {
+    currentLectures = [];
     document.getElementById("appView").innerHTML = `
       <div class="empty-state">
         <i class="fa-solid fa-video-slash" style="font-size:36px;color:var(--primary);margin-bottom:10px;"></i>
         <h3>No Lectures Uploaded</h3>
-        <p>Add unlisted YouTube video links to this chapter from the Admin Panel.</p>
+        <p>Add video links (YouTube / embed / mp4) to this chapter from the Admin Panel.</p>
       </div>`;
     return;
   }
 
-  const activeLec = lectures[activeIdx] || lectures[0];
+  activeIdx = Math.min(Math.max(0, activeIdx | 0), lectures.length - 1);
+  currentLectureIndex = activeIdx;
+  currentLectures = lectures;
+  currentChapterObj = chapter;
+  const activeLec = lectures[activeIdx];
 
-  let html = `
+  const html = `
     <div class="player-wrapper">
-      <div id="hpMount"></div>
-      <div class="active-lec-details">
-        <div class="active-lec-meta">
-          <div class="lec-pill-row">
-            <span class="lec-num-badge">LEC NO. ${activeLec.lecNumber}</span>
-            <span class="lec-chap-tag"><i class="fa-solid fa-bookmark"></i> Chapter: ${esc(chapter.title)}</span>
-          </div>
-          <div class="active-lec-title">${esc(activeLec.autoTitle)}</div>
-        </div>
-        <button class="notes-btn-small" style="padding:10px 16px;font-size:13.5px;" onclick="openNotesModal('${encodeURIComponent(activeLec.autoTitle)}', '${encodeURIComponent(activeLec.notesUrl || '')}')">
-          <i class="fa-solid fa-file-pdf"></i> Notes
-        </button>
-      </div>
+      <div class="player-frame" id="hpMount"></div>
+      <div class="active-lec-details" id="activeLecDetails">${activeDetailsHtml(activeLec, chapter)}</div>
     </div>
 
     <div class="playlist-header">
-      <span>All Lectures in ${esc(chapter.title)}</span>
-      <span style="font-size:13px;color:var(--text-muted);">${lectures.length} Lectures</span>
+      <span class="playlist-title">All Lectures in ${esc(chapter.title)}</span>
+      <span class="playlist-ctrl">
+        <span class="playlist-count">${lectures.length} Lectures</span>
+        <button class="car-arrow" onclick="scrollLecCarousel(-1)" aria-label="Pichle lectures"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="car-arrow" onclick="scrollLecCarousel(1)" aria-label="Agle lectures"><i class="fa-solid fa-chevron-right"></i></button>
+      </span>
     </div>
 
-    <div class="compact-lec-list">
+    <div class="lec-carousel" id="lecCarousel">
+      ${lectures.map((lec, idx) => lecCardHtml(lec, idx, idx === activeIdx)).join("")}
+    </div>
+    <div class="swipe-hint"><i class="fa-solid fa-hand-pointer"></i> Aur lectures ke liye left-right swipe karein</div>
   `;
 
-  lectures.forEach((lec, idx) => {
-    const isPlaying = idx === activeIdx;
-    const thumbUrl = getYouTubeThumb(lec.videoUrl, lec.thumbnail);
-    const thumbHtml = thumbUrl
-      ? `<img src="${esc(thumbUrl)}" alt="Lec ${lec.lecNumber}" onerror="this.remove()">`
-      : "";
-
-    html += `
-      <div class="compact-lec-card ${isPlaying ? 'playing' : ''}" onclick="switchLecture(${idx})">
-        <div class="mini-video-frame">
-          ${thumbHtml}
-          <div class="mini-play-overlay">
-            <i class="fa-solid ${isPlaying ? 'fa-volume-high' : 'fa-play'}"></i>
-          </div>
-          <div class="mini-lec-badge">Lec ${lec.lecNumber}</div>
-        </div>
-
-        <div class="compact-lec-right">
-          <div class="compact-lec-title">${esc(lec.autoTitle)}</div>
-          <button class="notes-btn-small" onclick="event.stopPropagation(); openNotesModal('${encodeURIComponent(lec.autoTitle)}', '${encodeURIComponent(lec.notesUrl || '')}')">
-            <i class="fa-solid fa-book-open"></i> Notes
-          </button>
-        </div>
-      </div>
-    `;
-  });
-
-  html += `</div>`;
   destroyPlayer();
   document.getElementById("appView").innerHTML = html;
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo(0, 0);
 
-  activePlayer = new HrryPlayer(document.getElementById("hpMount"), {
-    videoId: extractYouTubeId(activeLec.videoUrl),
-    title: activeLec.autoTitle,
-    poster: getYouTubeThumb(activeLec.videoUrl, activeLec.thumbnail),
-    autoplay: autoplay
-  });
+  mountLecturePlayer(activeLec, autoplay);
+  centerActiveCard(false);
 }
 
+// Page dobara render nahi hota -> player flicker/gayab nahi hota
 function switchLecture(newIndex) {
-  openLecturesView(currentCourseId, currentSubjectId, currentChapterId, newIndex, true);
+  if (!currentLectures.length) return;
+  if (newIndex === currentLectureIndex && activePlayer) { ensurePlayerVisible(); return; }
+  currentLectureIndex = newIndex;
+  const lec = currentLectures[newIndex];
+
+  document.getElementById("activeLecDetails").innerHTML = activeDetailsHtml(lec, currentChapterObj);
+  document.querySelectorAll("#lecCarousel .lec-card").forEach(card => {
+    const on = Number(card.dataset.idx) === newIndex;
+    card.classList.toggle("playing", on);
+    const ic = card.querySelector(".mini-play-overlay i");
+    if (ic) ic.className = "fa-solid " + (on ? "fa-volume-high" : "fa-play");
+  });
+
+  mountLecturePlayer(lec, true);
+  centerActiveCard(true);
+  ensurePlayerVisible();
 }
 
 /* ---------------- Notes viewer ---------------- */
@@ -474,4 +543,16 @@ function closeNotesModal() {
 }
 
 /* ---------------- Init ---------------- */
-window.addEventListener("DOMContentLoaded", loadDatabase);
+function syncHeaderHeight() {
+  const h = document.querySelector("header");
+  if (h) document.documentElement.style.setProperty("--hdr-h", h.offsetHeight + "px");
+}
+window.addEventListener("resize", syncHeaderHeight);
+window.addEventListener("orientationchange", syncHeaderHeight);
+window.addEventListener("load", syncHeaderHeight);
+window.addEventListener("DOMContentLoaded", () => {
+  syncHeaderHeight();
+  const hd = document.querySelector("header");
+  if (hd && window.ResizeObserver) new ResizeObserver(syncHeaderHeight).observe(hd); // font/icons load hone par height badle to bhi sahi rahe
+  loadDatabase();
+});
